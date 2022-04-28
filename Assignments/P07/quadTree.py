@@ -34,8 +34,8 @@ class Rect:
     def __init__(self, cx, cy, w, h):
         self.cx, self.cy = cx, cy
         self.w, self.h = w, h
-        self.west_edge, self.east_edge = cx - w / 2, cx + w / 2
-        self.north_edge, self.south_edge = cy - h / 2, cy + h / 2
+        self.west_edge, self.east_edge = cx - w/2, cx + w/2
+        self.north_edge, self.south_edge = cy - h/2, cy + h/2
 
     def __repr__(self):
         return str((self.west_edge, self.east_edge,
@@ -119,21 +119,21 @@ class QuadTree:
         """Divide (branch) this node by spawning four children nodes."""
 
         cx, cy = self.bbox.cx, self.bbox.cy
-        w, h = self.bbox.w / 2, self.bbox.h / 2
+        w, h = self.bbox.w/2, self.bbox.h/2
         # The boundaries of the four children nodes are "northwest",
         # "northeast", "southeast" and "southwest" quadrants within the
         # bbox of the current node.
         self.nw = QuadTree(
-            Rect(cx - w / 2, cy - h / 2, w, h), self.max_points, self.depth + 1
+            Rect(cx - w/2, cy - h/2, w, h), self.max_points, self.depth + 1
         )
         self.ne = QuadTree(
-            Rect(cx + w / 2, cy - h / 2, w, h), self.max_points, self.depth + 1
+            Rect(cx + w/2, cy - h/2, w, h), self.max_points, self.depth + 1
         )
         self.se = QuadTree(
-            Rect(cx + w / 2, cy + h / 2, w, h), self.max_points, self.depth + 1
+            Rect(cx + w/2, cy + h/2, w, h), self.max_points, self.depth + 1
         )
         self.sw = QuadTree(
-            Rect(cx - w / 2, cy + h / 2, w, h), self.max_points, self.depth + 1
+            Rect(cx - w/2, cy + h/2, w, h), self.max_points, self.depth + 1
         )
         self.divided = True
 

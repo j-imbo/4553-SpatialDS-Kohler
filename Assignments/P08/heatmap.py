@@ -33,15 +33,15 @@ def hueshift(color, deg):  # shifts a hue by a certain degree
     cosA = math.cos(deg*math.pi/180)  # degree -> radians
     sinA = math.sin(deg*math.pi/180)
     rotmat = [
-        [cosA + (1 - cosA) / 3,
-            1/3 * (1 - cosA) - math.sqrt(1/3) * sinA,
-            1/3 * (1 - cosA) + math.sqrt(1/3) * sinA],
-        [1/3 * (1 - cosA) + math.sqrt(1/3) * sinA,
-            cosA + 1/3*(1 - cosA),
-            1/3 * (1 - cosA) - math.sqrt(1/3) * sinA],
-        [1/3 * (1 - cosA) - math.sqrt(1/3) * sinA,
-            1/3 * (1 - cosA) + math.sqrt(1/3) * sinA,
-            cosA + 1/3 * (1 - cosA)]
+        [cosA + (1-cosA)/3,
+            1/3*(1-cosA) - math.sqrt(1/3)*sinA,
+            1/3*(1-cosA) + math.sqrt(1/3)*sinA],
+        [1/3*(1-cosA) + math.sqrt(1/3)*sinA,
+            cosA + 1/3*(1-cosA),
+            1/3*(1-cosA) - math.sqrt(1/3)*sinA],
+        [1/3*(1-cosA) - math.sqrt(1/3)*sinA,
+            1/3*(1-cosA) + math.sqrt(1/3)*sinA,
+            cosA + 1/3*(1-cosA)]
     ]
     hexout = [0, 0, 0]
     for i in range(3):
