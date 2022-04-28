@@ -36,26 +36,26 @@ for point in points:
 
 gs = gp.GeoSeries(cities)
 
-with open("distance.csv","w",newline='') as out:
+with open("distance.csv", "w", newline='') as out:
     writer = csv.writer(out)
     row = []
     for i in range(len(cities)):
-        writer.writerow(gs.distance(cities[i],align=False))
+        writer.writerow(gs.distance(cities[i], align=False))
 
 uf = open("ufos.csv")
 ufos = pd.read_csv(uf)
-gu = gp.GeoDataFrame(ufos, geometry=gp.points_from_xy(ufos.lon,ufos.lat))
+gu = gp.GeoDataFrame(ufos, geometry=gp.points_from_xy(ufos.lon, ufos.lat))
 
 # turn point arrays into geoseries
 gsU = gu.geometry
 
-#loop thru cities for 100 closest ufos
+# loop thru cities for 100 closest ufos
 ufodist = []
 for i in range(len(gs)):
     a = gsU.distance(gs[i])
-    a = a.values # just distances for sorting
+    a = a.values  # just distances for sorting
     a = np.sort(a)
-    hundo = a[0:100] # get top 100
+    hundo = a[0:100]  # get top 100
     avg = np.average(hundo)
     ct = {
         "city": ctnames[i],
@@ -65,4 +65,4 @@ for i in range(len(gs)):
     }
     ufodist.append(ct)
 
-json.dump(ufodist, open("ufoavg.json","w"),indent=4,separators=(",",": "))
+json.dump(ufodist, open("ufoavg.json", "w"), indent=4, separators=(",", ": "))

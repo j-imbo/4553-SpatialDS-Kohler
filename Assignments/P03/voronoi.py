@@ -2,7 +2,6 @@ import geopandas as gp
 import json
 from shapely.ops import unary_union
 from geovoronoi import voronoi_regions_from_coords, points_to_coords
-from geovoronoi.plotting import subplot_for_map, plot_voronoi_polys_with_points_in_area
 
 
 border = gp.read_file("data/us_border.geojson")
@@ -26,7 +25,8 @@ for i in range(len(regions)):
     for j in range(len(res)):
         ufo = []
         if res[j]:
-            city["UFOs"].append({j: [ufos["geometry"][j].x,ufos["geometry"][j].y]})
+            city["UFOs"].append({j: [ufos["geometry"][j].x,
+                                     ufos["geometry"][j].y]})
     ufoReg.append(city)
 
-json.dump(ufoReg, open("voroout.json","w"),indent=4,separators=(",",": "))
+json.dump(ufoReg, open("voroout.json", "w"), indent=4, separators=(",", ": "))

@@ -38,7 +38,8 @@ class Rect:
         self.north_edge, self.south_edge = cy - h / 2, cy + h / 2
 
     def __repr__(self):
-        return str((self.west_edge, self.east_edge, self.north_edge, self.south_edge))
+        return str((self.west_edge, self.east_edge,
+                   self.north_edge, self.south_edge))
 
     def __str__(self):
         return "({:.2f}, {:.2f}, {:.2f}, {:.2f})".format(
@@ -72,7 +73,8 @@ class Rect:
     def draw(self, ax, c="k", lw=1, **kwargs):
         x1, y1 = self.west_edge, self.north_edge
         x2, y2 = self.east_edge, self.south_edge
-        ax.plot([x1, x2, x2, x1, x1], [y1, y1, y2, y2, y1], c=c, lw=lw, **kwargs)
+        ax.plot([x1, x2, x2, x1, x1], [y1, y1, y2, y2, y1],
+                c=c, lw=lw, **kwargs)
 
 
 class QuadTree:
@@ -214,7 +216,8 @@ class QuadTree:
 
         npoints = len(self.points)
         if self.divided:
-            npoints += len(self.nw) + len(self.ne) + len(self.se) + len(self.sw)
+            npoints += len(self.nw) + len(self.ne) \
+                       + len(self.se) + len(self.sw)
         return npoints
 
     def draw(self, ax):
