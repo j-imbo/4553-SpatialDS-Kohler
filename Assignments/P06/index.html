@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Globull</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+            integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+            crossorigin="" />
+        <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+            integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+            crossorigin=""></script>
+        <style>
+            html,
+            body {
+                height: 100%;
+                padding: 0;
+                margin: 0;
+            }
+
+            #map {
+                width: 64%;
+                height: 100%;
+                float: left;
+            }
+
+            #text {
+                height: 100%;
+                width: 35%;
+                float: right;
+            }
+
+            #country {
+                margin-top: 15px;
+                margin-bottom: 25px;
+            }
+
+            #geojsontext {
+                display: block;
+                margin-left: auto;
+                margin-right: auto;
+                margin-top: 20px;
+                width: 90%;
+                height: 80%;
+            }
+
+            #submit {
+                margin: 20px;
+            }
+            #newgame {
+                margin: 20px
+            }
+
+            #history {
+                border-collapse: collapse;
+                visibility: hidden;
+            }
+
+            #history td,
+            #history th {
+                border: 1px solid #ddd;
+                padding: 8px;
+                margin: 0px;
+            }
+
+            #history tr:nth-child(even) {
+                background-color: #f2f2f2;
+            }
+
+            #history tr:hover {
+                background-color: #ddd;
+            }
+
+            #history th {
+                padding-top: 6px;
+                padding-bottom: 6px;
+                text-align: left;
+                background-color: #04AA6D;
+                color: white;
+                margin: 0px;
+            }
+
+            #canvas {
+                position: absolute;
+                pointer-events: none;
+                z-index: 1001;
+            }
+        </style>
+    </head>
+
+    <body>
+        <canvas id="canvas"></canvas>
+        <div id="map"></div>
+        <div id="text">
+            <label for="country">Show a Country:</label>
+            <select name="country" id="country">
+                <option value="volvo">Volvo</option>
+                <option value="saab">Saab</option>
+                <option value="mercedes">Mercedes</option>
+                <option value="audi">Audi</option>
+            </select>
+            <div>
+                <table id="history">
+                    <row>
+                        <th>Country</th>
+                        <th>Center Point</th>
+                        <th>Distance to Target</th>
+                        <th>Direction</th>
+                    </row>
+                </table>
+            </div>
+            <input type="button" id="submit" value="Submit">
+            <input type="button" id="newgame" value="New Game">
+            <hr>
+        </div>
+        <script>
+            myStorage = window.localStorage;
+            port = 8000;
+
+            let map = L.map("map").setView([0, 0], 1);
+            L.tileLayer("https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_nolabels/{z}/{x}/{y}.png", {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attribution/">CartoDB</a>',
+                subdomains: "abcd",
+                maxZoom: 19
+            }).addTo(map)
+
+            let layers = L.layerGroup().addTo(map);
+
+            function apiCall(url, callback) {
+                fetch(url)
+                    .then(function (response) {
+                        if (response.ok) {
+                            return response.json();
+                        }
+                        throw new Error('Oopsies!');
+                    })
+                    .then(function (data) {
+                        console.log(data);
+                        callback(data);
+                    }).catch((error) => {
+                        let message = "<h1>Error: Connecting to: " + url + "</h1>";
+                        message += "<h1>Is your API running?</h1>";
+                        document.getElementById("map").innerHTML = message;
+                        console.log(error);
+                    })
+            }
+
+            function apiGetCountryNames() {
+                console.log("apiGetCountryNames");
+
+                let url = "http://127.0.0.1:" + port + "/country_names/";
+                apiCall(url, populateDropDown);
+            }
+
+            function updatePolygonCenter(data) {
+                console.log("updatePolygonCenter");
+                console.log(data);
+                data[0] = data[0].toFixed(4)
+                data[1] = data[1].toFixed(4)
+                localStorage.setItem('polygonCenterPoint', data);
+            }
+
+            function updateLastCountryName(name) {
+                console.log("updateLastCountryName");
+                console.log("name")
+
+                localStorage.setItem('lastCountry', name);
+            }
+
+            function storeDistanceBearing(data) {
+                console.log("storeDistanceBearing");
+
+                localStorage.setItem('distance', data['distance']);
+                let d = localStorage.getItem('distance');
+
+                localStorage.setItem('bearing', data['bearing']);
+                let b = localStorage.getItem('bearing');
+
+                let c = cardinal(b);
+                localStorage.setItem('direction', c);
+
+                console.log("distance: " + d + ", bearing: " + b + ", direction: " + c);
+            }
+
+            function apiGetCountryPoly() {
+                console.log("apiGetCountryPoly");
+                
+                let name = getDropDownCountryName();
+                let url = "http://127.0.0.1:" + port + "/country/" + name;
+
+                apiCall(url, showGeoJson);
+
+                apiGuess(name);
+
+                localStorage.setItem('lastCountry', name);
+            }
+
+            function apiGuess(name) {
+                console.log("apiGuess");
+                console.log(name);
+
+                let url = "http://127.0.0.1:" + port + "/countryCenter/" + name + "?raw=true";
+                apiCall(url, updatePolygonCenter);
+
+                let target = localStorage.getItem('target');
+                target = JSON.parse(target);
+                let url2 = "http://127.0.0.1:" + port + "/centroidRelations/?start=" + name + "&end=" + target['name'];
+                apiCall(url2, storeDistanceBearing);
+
+                setTimeout(newRow,250);
+            }
+            
+            function newRow() {
+                console.log("newRow");
+
+                let name = localStorage.getItem('lastCountry')
+
+                let center = localStorage.getItem('polygonCenterPoint');
+                coords = center.replace(",", ", ");
+                var val = center.split(",");
+
+                let distance = localStorage.getItem('distance');
+                let d = parseFloat(distance);
+                d = d.toFixed(4);
+                d = d + " miles";
+
+
+                var direction = (distance == 0) ?  "\u2705" : localStorage.getItem('direction');
+
+                console.log(name + "; " + coords + "; " + d  + "; "+ direction);
+                appendTableRow(name, coords, d, direction);
+
+                map.flyTo(L.latLng(val[1], val[0]), 5);
+
+                if (distance == 0) {
+                    console.log("Correct!");
+                    document.getElementById("submit").disabled = true;
+                    win();
+                }
+            }
+
+            function appendTableRow(name, location, distance, direction) {
+                console.log("appendTableRow");
+                var table = document.getElementById("history");
+
+                table.style.visibility = "visible";
+
+                var row = table.insertRow();
+
+                var cell1 = row.insertCell(0);
+                var cell2 = row.insertCell(1);
+                var cell3 = row.insertCell(2);
+                var cell4 = row.insertCell(3);
+
+                cell1.innerHTML = name;
+                cell2.innerHTML = location;
+                cell3.innerHTML = distance;
+                cell4.innerHTML = direction;
+            }
+
+            function showGeoJson(data) {
+                console.log("showGeoJson");
+
+                result = {
+                    "type": "FeatureCollection",
+                    "features": [data['featureCollection']['features'][0]['feature']]
+                };
+                L.geoJSON(result).addTo(layers);
+            }
+
+            function chooseRandomTarget(data) {
+                url = "http://127.0.0.1:" + port + "/randomCountry/"
+                apiCall(url, saveTargetLocation)
+            }
+
+            function saveTargetLocation(data) {
+                localStorage.setItem('target', JSON.stringify(data));
+            }
+
+            function populateDropDown(data) {
+                var select = document.getElementById("country");
+
+                select.innerHTML = "";
+
+                for (var i=0; i< data.length; i++) {
+                    var el = document.createElement("option");
+                    el.textContent = data[i];
+                    el.value = data[i];
+                    select.appendChild(el);
+                }
+            }
+
+            function getDropDownCountryName() {
+                var e = document.getElementById("country");
+
+                return e.options[e.selectedIndex].text;
+            }
+
+            function cardinal(degrees) {
+                degrees = (degrees+360)%360
+                console.log("cardinal of " + degrees)
+                let dir = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+                    "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
+                degrees = parseFloat(degrees);
+                let ix = Math.round((degrees)/22.5);
+                let d = dir[ix % 16];
+                console.log(d);
+                return d;
+            }
+
+            const refreshPage = () => {
+                location.reload();
+            }
+
+            document.getElementById("submit").addEventListener("click", apiGetCountryPoly);
+            document.getElementById("newgame").addEventListener("click", refreshPage);
+            window.onload = function () {
+                apiGetCountryNames();
+                chooseRandomTarget();
+            }
+
+            function win() {
+                var canvas = document.getElementById("canvas");
+                var ctx = canvas.getContext("2d");
+
+                var W = window.innerWidth;
+                var H = window.innerHeight;
+                canvas.width = W;
+                canvas.height = H;
+
+                var mp = 200;
+                var particles = [];
+                for (var i=0; i<mp; i++) {
+                    particles.push({
+                        x: Math.random() *  W,
+                        y: Math.random() *  H,
+                        r: Math.random() *  15 + 1,
+                        d: Math.random() *  mp,
+                        color: "rgba(" + Math.floor((Math.random() * 255)) + ", " + Math.floor((Math.random() * 255))
+                                + ", " + Math.floor((Math.random() * 255)) + ", 0.8",
+                        tilt: Math.floor(Math.random() * 5) - 5
+                    });
+                }
+
+                setInterval(draw, 20);
+
+                function draw() {
+                    ctx.clearRect(0, 0, W, H);
+
+                    for (var i=0; i<mp; i++) {
+                        var p = particles[i];
+                        ctx.beginPath();
+                        ctx.lineWidth = p.r;
+                        ctx.strokeStyle = p.color;
+                        ctx.moveTo(p.x, p.y);
+                        ctx.lineTo(p.x + p.tilt + p.r/2, p.y + p.tilt);
+                        ctx.stroke();
+                    }
+
+                    update();
+                }
+
+                var angle = 0;
+
+                function update() {
+                    angle += 0.01;
+                    for(var i=0; i<mp; i++) {
+                        var p = particles[i];
+                        p.y += Math.cos(angle + p.d) + 1 + p.r/2;
+                        p.x += Math.sin(angle) * 2;
+
+                        if (p.x>W+5 || p.x<-5 || p.y > H) {
+                            if (i%3 > 0) {
+                                particles[i] = {
+                                    x: Math.random() * W,
+                                    y: -10,
+                                    r: p.r,
+                                    d: p.d,
+                                    color: p.color,
+                                    tilt: p.tilt
+                                };
+                            } else {
+                                if (Math.sin(angle) > 0) {
+                                    particles[i] = {
+                                        x: -5,
+                                        y: Math.random() * H,
+                                        r: p.r,
+                                        d: p.d,
+                                        color: p.color,
+                                        tilt: p.tilt
+                                    };
+                                } else {
+                                    particles[i] = {
+                                        x: W + 5,
+                                        y: Math.random() * H,
+                                        r: p.r,
+                                        d: p.d,
+                                        color: p.color,
+                                        tilt: p.tilt
+                                    };
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        </script>
+    </body>
+</html>
