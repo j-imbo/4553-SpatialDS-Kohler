@@ -8,4 +8,3 @@ Using bounding boxes to query a quadtree. Contains both a scrolling box and a dr
 |:-:|-|-|
 |1|[bbox.py](./bbox.py)|Solution file.|
 |2|[quadTree.py](/quadTree.py)|QuadTree implementation.|
-|3|||
